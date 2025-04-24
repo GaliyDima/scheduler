@@ -14,6 +14,8 @@ import {
   Divider,
   Card,
   Button,
+  List,
+  ListItem,
 } from "@mui/material";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -25,6 +27,7 @@ import InfoIcon from "@mui/icons-material/Info";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import WatchLaterIcon from "@mui/icons-material/WatchLater";
 import ScheduleIcon from "@mui/icons-material/Schedule";
+import { alpha } from "@mui/material/styles";
 
 interface CalendarProps {
   onDateRangeChange?: (startDate: Date | null, endDate: Date | null) => void;
@@ -149,22 +152,41 @@ const Calendar: React.FC<CalendarProps> = ({
       }
     };
 
-    const handleTimeChange = (newValue: Date | null) => {
-      if (isStart) {
-        setTempStartTime(newValue);
-      } else {
-        setTempEndTime(newValue);
+    const generateTimeList = () => {
+      const times = [];
+      for (let hour = 0; hour <= 23; hour++) {
+        for (let minute of [0, 30]) {
+          const time = new Date();
+          time.setHours(hour);
+          time.setMinutes(minute);
+          time.setSeconds(0);
+          time.setMilliseconds(0);
+          times.push(time);
+        }
       }
+      return times;
     };
 
-    const handleConfirm = () => {
+    const handleTimeSelect = (time: Date) => {
       if (isStart) {
-        onChange(tempStartTime);
+        setTempStartTime(time);
+        onChange(time);
       } else {
-        onChange(tempEndTime);
+        setTempEndTime(time);
+        onChange(time);
       }
       onClose();
     };
+
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    };
+
+    const selectedTime = isStart ? tempStartTime : tempEndTime;
 
     return (
       <Box sx={{ position: "relative" }}>
@@ -205,13 +227,7 @@ const Calendar: React.FC<CalendarProps> = ({
                   fontWeight: 500,
                 }}
               >
-                {value
-                  ? value.toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })
-                  : "Select time"}
+                {value ? formatTime(value) : "Select time"}
               </Typography>
             </Box>
           </Box>
@@ -228,43 +244,62 @@ const Calendar: React.FC<CalendarProps> = ({
               borderRadius: "12px",
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15)",
               overflow: "hidden",
+              width: "120px",
+              maxHeight: "300px",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <LocalizationProvider
-              dateAdapter={AdapterDateFns}
-              adapterLocale={enUS}
+            <List
+              sx={{
+                maxHeight: "250px",
+                overflowY: "auto",
+                "&::-webkit-scrollbar": {
+                  width: "8px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "#f1f1f1",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "#888",
+                  borderRadius: "4px",
+                  "&:hover": {
+                    background: "#555",
+                  },
+                },
+              }}
             >
-              <Box>
-                <StaticTimePicker
-                  value={isStart ? tempStartTime : tempEndTime}
-                  onChange={handleTimeChange}
-                  sx={timePickerStyles}
-                  ampm={false}
-                />
-                <Box
+              {generateTimeList().map((time) => (
+                <ListItem
+                  key={time.getTime()}
+                  onClick={() => handleTimeSelect(time)}
                   sx={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: 1,
-                    p: 2,
-                    borderTop: "1px solid rgba(0, 0, 0, 0.1)",
-                    backgroundColor: "white",
+                    cursor: "pointer",
+                    py: 1,
+                    px: 2,
+                    backgroundColor:
+                      selectedTime &&
+                      formatTime(selectedTime) === formatTime(time)
+                        ? theme.palette.primary.main
+                        : "transparent",
+                    color:
+                      selectedTime &&
+                      formatTime(selectedTime) === formatTime(time)
+                        ? "white"
+                        : "inherit",
+                    "&:hover": {
+                      backgroundColor:
+                        selectedTime &&
+                        formatTime(selectedTime) === formatTime(time)
+                          ? theme.palette.primary.main
+                          : theme.palette.action.hover,
+                    },
                   }}
                 >
-                  <Button onClick={onClose} variant="text" color="inherit">
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleConfirm}
-                    variant="contained"
-                    color="primary"
-                  >
-                    OK
-                  </Button>
-                </Box>
-              </Box>
-            </LocalizationProvider>
+                  <Typography variant="body2">{formatTime(time)}</Typography>
+                </ListItem>
+              ))}
+            </List>
           </Box>
         )}
       </Box>
@@ -324,19 +359,46 @@ const Calendar: React.FC<CalendarProps> = ({
                   border: "none",
                   borderRadius: "8px",
                   boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+                  display: "flex",
+                  flexDirection: "row",
                   "& .react-datepicker__month-container": {
-                    width: "100%",
+                    width: "50%",
+                    "&:not(:last-child)": {
+                      borderRight: "1px solid #e0e0e0",
+                    },
                   },
                   "& .react-datepicker__header": {
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
                     borderTopLeftRadius: "8px",
                     borderTopRightRadius: "8px",
+                    padding: "8px 0",
+                    "& .react-datepicker__current-month": {
+                      color: "white",
+                      fontSize: "1rem",
+                      fontWeight: 500,
+                    },
+                  },
+                  "& .react-datepicker__day-names": {
+                    display: "flex",
+                    justifyContent: "space-around",
+                    padding: "8px 0",
+                    backgroundColor: theme.palette.primary.main,
                   },
                   "& .react-datepicker__day-name": {
-                    color: theme.palette.primary.contrastText,
+                    color: "white",
+                    width: "2rem",
+                    lineHeight: "2rem",
+                    margin: 0,
+                  },
+                  "& .react-datepicker__month": {
+                    margin: 0,
+                    padding: "8px",
                   },
                   "& .react-datepicker__day": {
+                    width: "2rem",
+                    lineHeight: "2rem",
+                    margin: 0,
                     borderRadius: "50%",
                     transition: "all 0.2s ease",
                     "&:hover": {
@@ -344,20 +406,24 @@ const Calendar: React.FC<CalendarProps> = ({
                       color: theme.palette.primary.contrastText,
                     },
                   },
-                  "& .react-datepicker__day--selected": {
-                    backgroundColor: theme.palette.primary.main,
-                    color: theme.palette.primary.contrastText,
-                    "&:hover": {
-                      backgroundColor: theme.palette.primary.dark,
+                  "& .react-datepicker__day--selected, & .react-datepicker__day--in-selecting-range, & .react-datepicker__day--in-range":
+                    {
+                      backgroundColor: theme.palette.primary.main,
+                      color: theme.palette.primary.contrastText,
+                      "&:hover": {
+                        backgroundColor: theme.palette.primary.dark,
+                      },
                     },
-                  },
-                  "& .react-datepicker__day--in-range": {
-                    backgroundColor: theme.palette.primary.light,
-                    color: theme.palette.primary.contrastText,
-                  },
                   "& .react-datepicker__day--keyboard-selected": {
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.primary.contrastText,
+                  },
+                  "& .react-datepicker__day--in-selecting-range:not(.react-datepicker__day--in-range)":
+                    {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.5),
+                    },
+                  "& .react-datepicker__day--disabled": {
+                    color: theme.palette.text.disabled,
                   },
                 },
               }}
@@ -370,7 +436,7 @@ const Calendar: React.FC<CalendarProps> = ({
                 selectsRange
                 inline
                 locale={enUS}
-                monthsShown={1}
+                monthsShown={2}
                 minDate={new Date()}
                 dateFormat="MM/dd/yyyy"
                 showPopperArrow={false}
@@ -383,6 +449,46 @@ const Calendar: React.FC<CalendarProps> = ({
                   return true;
                 }}
               />
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                mt: 2,
+                px: 2,
+              }}
+            >
+              <Box>
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  Start date
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {startDate
+                    ? startDate.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "—"}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "text.secondary", textAlign: "right" }}
+                >
+                  End date
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {endDate
+                    ? endDate.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "—"}
+                </Typography>
+              </Box>
             </Box>
           </Box>
 
